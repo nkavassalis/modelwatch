@@ -1,0 +1,29 @@
+# modelwatch configuration
+
+# URL to watch. Either the huggingface.co browse URL (translated to the
+# internal JSON API automatically) or a raw /api/models URL.
+source_url: https://huggingface.co/models?sort=trending
+
+# Monitor the top N positions of the trending list.
+top_n: 100
+
+# Only hit huggingface.co once per this many hours (also used as the
+# S3 Cache-Control / CloudFront freshness window in publish mode).
+cache_ttl_hours: 24
+
+# Where the seen-models state and cached feed live.
+state_dir: ./.modelwatch
+
+feed:
+  title: Newly Trending Hugging Face Models
+  description: Models that newly entered the Hugging Face trending leaderboard.
+  site_url: https://huggingface.co/models?sort=trending
+
+# Used by `modelwatch publish` only.
+s3:
+  bucket: modelwatch
+  key: feed.xml
+  region: us-east-1
+  # Optional: CloudFront distribution id; an invalidation is issued
+  # after each upload when set.
+  distribution_id: ""

@@ -1,0 +1,4 @@
+# modelwatch publish — runs hourly; the app itself skips the fetch/upload
+# unless the configured cache_ttl_hours (default 24h) has expired.
+# Adjust paths and venv location to your install.
+0 * * * * cd /home/nick/modelWatch && /home/nick/modelWatch/.venv/bin/python -m modelwatch publish --config /home/nick/modelWatch/config.yml >> /home/nick/modelWatch/publish.log 2>&1
