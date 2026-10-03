@@ -36,6 +36,11 @@ crontab.example, config.example.yml
    items a reader already saw.
 4. **RSS entries keep their shape:** title = model id (`Owner/Model`),
    `<category>` = human pipeline label, `<link>`/guid from the model id.
+   `<pubDate>` = modelwatch first-seen time (`first_seen`);
+   `<dcterms:created>` = HF upload time (`TrendingModel.created_at`, captured
+   at first sight). These are different dates on purpose — do not conflate
+   them. Entries without `created` (legacy state) must render without the
+   dcterms element.
 5. **Determinism/testability:** no network in tests — monkeypatch
    `modelwatch.core.fetch_trending` or `modelwatch.fetcher.requests.get`.
    Timestamps are injectable (`State.record(now=...)`).

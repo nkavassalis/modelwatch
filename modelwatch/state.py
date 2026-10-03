@@ -68,6 +68,7 @@ class State:
                 "category": m.category,
                 "url": m.url,
                 "first_seen": now,
+                "created": getattr(m, "created_at", 0.0) or 0.0,
             })
             new_count += 1
         self.data["seen"] = sorted(seen)

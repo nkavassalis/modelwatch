@@ -9,6 +9,16 @@ Each RSS entry carries:
 - **title** — the model id, e.g. `Qwen/Qwen-Image-2.1`
 - **category** — the human-readable pipeline tag, e.g. `Text-to-Image`
 - **link** — `https://huggingface.co/<model-id>`
+- **pubDate** — when *modelwatch first saw the model enter the top N* (i.e. when
+  it was first published to this feed), not the model's release date
+- **dcterms:created** — the model's actual upload date on Hugging Face (from the
+  API's `createdAt`), also repeated in plain text in the description
+  ("Uploaded to Hugging Face 2026-09-18")
+
+So `<pubDate>` answers "when did it hit the leaderboard feed" and
+`<dcterms:created>` answers "when did the model actually come out" — a model
+uploaded long ago that only recently went viral will show an older
+`dcterms:created` with a recent `pubDate`.
 
 Hugging Face is only fetched when the configured cache TTL expires (default 24 hours), so you can run the publisher from cron every hour without hammering their API.
 

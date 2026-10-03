@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-import requests
 from dataclasses import dataclass
+from datetime import datetime
+
+import requests
 
 HF_LINK = "https://huggingface.co/{model_id}"
 TAGS_URL = "https://huggingface.co/api/models-tags-by-type"
@@ -14,10 +16,21 @@ USER_AGENT = "modelwatch/0.1 (+https://github.com/nkavassalis/modelwatch)"
 class TrendingModel:
     model_id: str
     category: str  # human readable pipeline label, "" when unknown
+    created_at: float = 0.0  # HF upload time (epoch seconds); 0.0 if unknown
 
     @property
     def url(self) -> str:
         return HF_LINK.format(model_id=self.model_id)
+
+
+def _parse_dt(value) -> float:
+    """Parse an HF ISO-8601 timestamp ("2026-09-18T05:05:55.000Z") to epoch."""
+    if not value:
+        return 0.0
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return 0.0
 
 
 def _humanize(tag: str) -> str:
@@ -49,7 +62,11 @@ def fetch_trending(api_url: str, timeout: int = 30) -> list[TrendingModel]:
         if not model_id:
             continue
         tag = item.get("pipeline_tag") or ""
-        models.append(TrendingModel(model_id, labels.get(tag, _humanize(tag) if tag else "")))
+        models.append(TrendingModel(
+            model_id,
+            labels.get(tag, _humanize(tag) if tag else ""),
+            created_at=_parse_dt(item.get("createdAt")),
+        ))
     return models
 
 

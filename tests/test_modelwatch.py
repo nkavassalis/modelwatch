@@ -2,6 +2,7 @@
 
 import json
 import time
+from datetime import datetime, timezone
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -60,7 +61,8 @@ class FakeResp:
 
 def test_fetch_trending_parses_and_labels(monkeypatch):
     models_payload = [
-        {"id": "Qwen/Qwen-Image-2.1", "pipeline_tag": "text-to-image"},
+        {"id": "Qwen/Qwen-Image-2.1", "pipeline_tag": "text-to-image",
+         "createdAt": "2026-09-18T05:05:55.000Z"},
         {"id": "meta/Llama-5", "pipeline_tag": None},
         {"id": "no/tag"},
     ]
@@ -75,7 +77,11 @@ def test_fetch_trending_parses_and_labels(monkeypatch):
 
     monkeypatch.setattr("modelwatch.fetcher.requests.get", fake_get)
     got = fetch_trending("https://huggingface.co/api/models?sort=trendingScore")
-    assert got[0] == TrendingModel("Qwen/Qwen-Image-2.1", "Text-to-Image")
+    assert got[0] == TrendingModel(
+        "Qwen/Qwen-Image-2.1", "Text-to-Image",
+        created_at=datetime(2026, 9, 18, 5, 5, 55, tzinfo=timezone.utc).timestamp(),
+    )
+    assert got[1].created_at == 0.0  # missing createdAt -> unknown, not crash
     assert got[1].category == ""  # unknown tag with no label -> no fallback noise
     assert got[0].url == "https://huggingface.co/Qwen/Qwen-Image-2.1"
 
@@ -86,6 +92,14 @@ def test_humanize_fallback():
 
 
 # ---- state ----------------------------------------------------------------
+
+def test_state_records_created(tmp_path):
+    st = State(tmp_path / "state.json")
+    m = TrendingModel("C/C", "X", created_at=123.0)
+    st.record([m], now=456)
+    assert st.entries[0]["created"] == 123.0
+    assert st.entries[0]["first_seen"] == 456
+
 
 def test_state_first_seen_only_once(tmp_path):
     st = State(tmp_path / "state.json")
@@ -121,9 +135,11 @@ def test_cache_ttl(tmp_path):
 # ---- feed -----------------------------------------------------------------
 
 def test_render_feed_structure():
+    created = datetime(2026, 9, 18, 5, 5, 55, tzinfo=timezone.utc).timestamp()
     entries = [
         {"model_id": "Qwen/Qwen-Image-2.1", "category": "Text-to-Image",
-         "url": "https://huggingface.co/Qwen/Qwen-Image-2.1", "first_seen": 1700000000},
+         "url": "https://huggingface.co/Qwen/Qwen-Image-2.1", "first_seen": 1700000000,
+         "created": created},
     ]
     xml = render_feed(FeedMeta(), entries, link="https://example.com")
     root = ET.fromstring(xml)
@@ -132,6 +148,21 @@ def test_render_feed_structure():
     assert item.find("category").text == "Text-to-Image"
     assert item.find("link").text == "https://huggingface.co/Qwen/Qwen-Image-2.1"
     assert item.find("guid").text == "Qwen/Qwen-Image-2.1"
+    # modelwatch first-seen time is pubDate; HF upload time is dcterms:created
+    assert item.find("pubDate").text == "Tue, 14 Nov 2023 22:13:20 GMT"
+    dcterms = "{http://purl.org/dc/terms/}created"
+    assert item.find(dcterms).text == "2026-09-18T05:05:55Z"
+    assert "Uploaded to Hugging Face 2026-09-18" in item.find("description").text
+
+
+def test_render_feed_entry_without_created():
+    entries = [{"model_id": "a/b", "category": "", "url": "u",
+                "first_seen": 1700000000}]  # legacy entry, no created
+    xml = render_feed(FeedMeta(), entries, link="x")
+    root = ET.fromstring(xml)
+    item = root.find("./channel/item")
+    assert item.find("{http://purl.org/dc/terms/}created") is None
+    assert "Uploaded" not in item.find("description").text
 
 
 def test_render_feed_escapes():
