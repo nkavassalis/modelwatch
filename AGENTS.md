@@ -88,6 +88,13 @@ fetches to one per 24h).
   recreate the distribution, update the policy and `s3.distribution_id`.
 - CloudFront uses the default `*.cloudfront.net` certificate; custom domains
   would need an ACM cert in us-east-1.
+- Deployment host: PID 1 is sshd (no systemd), so cron is never auto-started
+  and was even found uninstalled once (feed stale for 3 days, Oct 2026).
+  `deploy/ensure-cron.sh` (installed as `/etc/profile.d/zz-ensure-cron.sh`)
+  restarts cron at login; if the live feed's `lastBuildDate` is older than
+  ~25h, check `pgrep cron`, `crontab -l`, and `publish.log` before assuming a
+  code bug. Feed staleness <= one TTL + one hour is normal (hourly cron +
+  24h TTL means uploads happen at most once a day).
 
 ## Adding a feature — recipe
 

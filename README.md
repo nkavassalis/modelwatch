@@ -96,6 +96,13 @@ from cron:
 0 * * * * cd /opt/modelwatch && /opt/modelwatch/.venv/bin/python -m modelwatch publish --config /opt/modelwatch/config.yml >> /opt/modelwatch/publish.log 2>&1
 ```
 
+> **Keep cron alive:** on minimal hosts (containers without systemd/init) the
+> cron daemon is not started at boot and the package can be autoremoved — the
+> feed then goes silently stale. `deploy/ensure-cron.sh` is installed as
+> `/etc/profile.d/zz-ensure-cron.sh` on the reference box to auto-restart cron
+> at every login; copy it if you redeploy. If the hosted feed is old, first
+> check `pgrep cron` and `crontab -l`.
+
 ### Deploying the S3 + CloudFront target
 
 The bucket must be private; CloudFront reads it via an Origin Access Control:
