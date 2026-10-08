@@ -88,12 +88,14 @@ modelwatch publish --config config.yml --force  # fetch + upload regardless
 Writes `.modelwatch/feed.xml` locally, uploads it to
 `s3://<bucket>/<key>` with `Cache-Control: max-age=<ttl>` and SSE, and (if
 `distribution_id` is set) invalidates the CloudFront path. When the TTL has not
-expired the run exits without touching S3 — which makes it cheap to run hourly
-from cron:
+expired the run exits without touching S3 — which makes it cheap to run from
+cron more often than the TTL (the reference deployment runs every 3 hours with
+a 3h TTL, so leaderboard arrival is captured within ~3h while uploads stay
+modest):
 
 ```cron
 # See crontab.example
-0 * * * * cd /opt/modelwatch && /opt/modelwatch/.venv/bin/python -m modelwatch publish --config /opt/modelwatch/config.yml >> /opt/modelwatch/publish.log 2>&1
+0 */3 * * * cd /opt/modelwatch && /opt/modelwatch/.venv/bin/python -m modelwatch publish --config /opt/modelwatch/config.yml >> /opt/modelwatch/publish.log 2>&1
 ```
 
 > **Keep cron alive:** on minimal hosts (containers without systemd/init) the
@@ -102,6 +104,10 @@ from cron:
 > `/etc/profile.d/zz-ensure-cron.sh` on the reference box to auto-restart cron
 > at every login; copy it if you redeploy. If the hosted feed is old, first
 > check `pgrep cron` and `crontab -l`.
+>
+> Note on dates: Hugging Face exposes no "trending since" timestamp, so a
+> model's leaderboard arrival is only knowable to within one fetch interval —
+> ~3h on the reference deployment.
 
 ### Deploying the S3 + CloudFront target
 

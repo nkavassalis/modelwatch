@@ -69,8 +69,11 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # setup
 Reference deployment (don't point experiments at it without `--force`, and
 never delete the bucket/policy): bucket `modelwatch-rss`, CloudFront
 `E2MSFTBRSGB0XM`, feed at https://du62m9e5v3var.cloudfront.net/feed.xml,
-hourly cron for the `nick` user running `publish` (the TTL limits actual
-fetches to one per 24h).
+cron for the `nick` user every 3 hours running `publish` with a 3h
+`cache_ttl_hours` (deployed `config.yml` overrides the 24h code default; the
+cron interval == TTL means every run fetches). Consequence: leaderboard
+arrival (`first_seen`, and therefore `<pubDate>`) is accurate to ~3h — HF
+exposes no "trending since" data, so this is a hard limit, not a bug.
 
 ## Gotchas
 
@@ -92,9 +95,8 @@ fetches to one per 24h).
   and was even found uninstalled once (feed stale for 3 days, Oct 2026).
   `deploy/ensure-cron.sh` (installed as `/etc/profile.d/zz-ensure-cron.sh`)
   restarts cron at login; if the live feed's `lastBuildDate` is older than
-  ~25h, check `pgrep cron`, `crontab -l`, and `publish.log` before assuming a
-  code bug. Feed staleness <= one TTL + one hour is normal (hourly cron +
-  24h TTL means uploads happen at most once a day).
+  ~4h (3h cron + slack), check `pgrep cron`, `crontab -l`, and `publish.log`
+  before assuming a code bug.
 
 ## Adding a feature — recipe
 
